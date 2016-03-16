@@ -74,7 +74,7 @@ class Service(val clusterContext: ClusterContext) extends Directives with Protoc
    }
 
    def start(port: Int) = {
-      Http().bindAndHandle(routes, "127.0.0.1", port)
+      Http().bindAndHandle(routes, interface = "0.0.0.0", port)
    }
 }
 

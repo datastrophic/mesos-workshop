@@ -92,7 +92,8 @@ First the Docker image with the latest service binary should be built and deploy
           "type": "DOCKER",
           "docker": {
             "image": "datastrophic/akka-microservice:latest",
-            "portMappings": [{"containerPort": 8088}],
+            "network": "BRIDGE",
+            "portMappings": [{"containerPort": 31337, "servicePort": 31337}],
             "parameters": [
                 { "key": "env", "value": "CASSANDRA_HOST='"$(docker-machine ip mesos)"'" },
                 { "key": "env", "value": "CASSANDRA_KEYSPACE=demo" },
@@ -105,7 +106,7 @@ First the Docker image with the latest service binary should be built and deploy
         "instances": 1
       }'
 
-Via Marathon UI identify the host and port of the service (e.g. mesos-slave:31158) and perform some queries:
+Via Marathon UI identify the host and port of the service (e.g. mesos-slave:31158) and perform some queries to post and read the data:
 
          curl -XPOST 'http://mesos-slave:31158/event' -H 'Content-Type: application/json' -d '{
             "id": "2e272715-c267-4c6b-8ab7-c9f96c5ab15a",
@@ -116,10 +117,9 @@ Via Marathon UI identify the host and port of the service (e.g. mesos-slave:3115
          }'
          
          
-         
-         
          curl -XGET http://mesos-slave:31158/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
 
+You can try to scale up and down the number of instances of the service and query different ones to verify that everything is working.
  
 ## Running Spark applications
 
