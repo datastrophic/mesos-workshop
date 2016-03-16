@@ -70,13 +70,31 @@ to `docker-machine ip mesos`.
  
 After that Chronos application should appear in Marathon UI and [Chronos UI](http://mesos:8400/) should be available on it's own and visible in 
 Mesos Master's UI.
+
+## Running dockerized services
+
+
+
+         {
+            "id": "2e272715-c267-4c6b-8ab7-c9f96c5ab15a",
+            "campaignId": "275ef4a2-513e-43e2-b85a-e656737c1147",
+            "eventType": "impression",
+            "value": 1,
+            "timestamp": "2016-03-15 12:15:39"
+         } 
+         
+         
+         
+         
+         read the results: GET http://<host>:<port>/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
+
  
 ## Running Spark applications
 
 ###Running from cluster nodes
 For running Spark jobs attaching one of the slave nodes is needed to run `spark-shell` and `spark-submit`:
  
-      docker exec -ti mesosworkshop_mesos_slave bash
+      docker exec -ti mesosworkshop_mesos-slave_1 bash
       
 Coarse-grained mode (default) (one executor per host, amount of Mesos tasks = amount of Spark executors = number of physical nodes,
 spark-submit registered as a framework)
@@ -143,3 +161,4 @@ Spark jobs for running in Chronos are basically all the computational jobs neede
 ##Mesos Framework Example
 
 TBD
+
