@@ -4,8 +4,8 @@ import java.text.SimpleDateFormat
 import java.util.UUID
 
 import akka.actor.ActorSystem
+import akka.event.Logging
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
@@ -18,42 +18,54 @@ class Service(val clusterContext: ClusterContext) extends Directives with Protoc
    implicit val system = ActorSystem()
    implicit def executor = system.dispatcher
    implicit val materializer = ActorMaterializer()
+   val logger = Logging(system, getClass)
 
    val format = new SimpleDateFormat("yyyy-dd-MM HH:mm:ss")
+
+   def save(event: Event) = {
+      Try {
+         clusterContext.session.execute(s"""INSERT INTO ${clusterContext.keyspace}.${clusterContext.table} (id, campaign_id, event_type, value, time, internal_id)
+            VALUES (${event.id.toString}, ${event.campaignId}, '${event.eventType}', ${event.value},
+                    ${format.parse(event.timestamp).getTime}, ${UUID.randomUUID().toString});""".stripMargin)
+      }
+   }
+
+   def getTotals(campaignId: UUID, eventType: String) = {
+      Try {
+         val rows = clusterContext.session.execute(s"""
+                         SELECT value from ${clusterContext.keyspace}.${clusterContext.table}
+                         WHERE campaign_id = ${campaignId.toString} AND event_type = '$eventType';""".stripMargin)
+
+         rows.all().foldLeft(0L){(acc, row) => acc + row.getLong(0)}
+      }
+   }
 
    val routes = {
       logRequestResult("akka-http-microservice") {
          pathPrefix("event") {
             (post & entity(as[Event])) { event =>
+               logger.info(s"Event received: $event")
                complete {
-                  Try {
-                     clusterContext.session.execute(
-                        s"""
-                        INSERT INTO ${clusterContext.keyspace}.${clusterContext.table}
-                        (id, campaign_id, event_type, value, time, internal_id)
-                        VALUES (${event.id.toString}, ${event.campaignId}, '${event.eventType}', ${event.value},
-                                ${format.parse(event.timestamp).getTime}, ${UUID.randomUUID().toString});
-                      """.stripMargin)
-                  } match {
-                     case Success(_) => OK
-                     case Failure(ex) => BadRequest -> ex.getMessage
+                  save(event) match {
+                     case Success(_) =>
+                        logger.info(s"Event stored: $event")
+                        OK
+                     case Failure(ex) =>
+                        logger.error(s"Error during writing to storage", ex)
+                        BadRequest -> ex.getMessage
                   }
                }
             }
          } ~
          pathPrefix("campaign" / JavaUUID / "totals"){ uuid =>
             (get & path(Segment)) { eventType =>
+               logger.info(s"Counting total of '$eventType' events for campaign: $uuid")
                complete {
-                  Try {
-                     val rows = clusterContext.session.execute(s"""
-                            SELECT value from ${clusterContext.keyspace}.${clusterContext.table}
-                            WHERE campaign_id = ${uuid.toString} AND event_type = '$eventType';""".stripMargin
-                     )
-
-                     rows.all().foldLeft(0L){(acc, row) => acc + row.getLong(0)}
-                  } match {
+                   getTotals(uuid, eventType) match {
                      case Success(value) => TotalsResponse(uuid.toString, value)
-                     case Failure(ex) => BadRequest -> ex.getMessage
+                     case Failure(ex) =>
+                        logger.error(s"Error during read from storage", ex)
+                        BadRequest -> ex.getMessage
                   }
                }
             }
@@ -61,8 +73,8 @@ class Service(val clusterContext: ClusterContext) extends Directives with Protoc
       }
    }
 
-   def start(interface: String, port: Int) = {
-      Http().bindAndHandle(routes, interface, port)
+   def start(port: Int) = {
+      Http().bindAndHandle(routes, "127.0.0.1", port)
    }
 }
 
@@ -80,13 +92,12 @@ object AkkaMicroservice {
       createSchema(clusterContext)
 
       val service = new Service(clusterContext)
-      service.start(config.interface, config.port)
+      service.start(config.port)
    }
 
    def main(args: Array[String]): Unit = {
       val parser = new scopt.OptionParser[Config]("scopt") {
          head("scopt", "3.x")
-         opt[String]('i', "service-interface") required() action { (x, c) => c.copy(interface = x) } text ("service interface")
          opt[Int]('p', "service-port") required() action { (x, c) => c.copy(port = x) } text ("service port to listen on")
          opt[String]('h', "cassandra-host") required() action { (x, c) => c.copy(cassandraHost = x) } text ("cassandra hostname")
          opt[String]('k', "keyspace") required() action { (x, c) => c.copy(keyspace = x) } text ("keyspace name")
@@ -120,4 +131,4 @@ object SchemaHelper {
    }
 }
 
-case class Config(interface: String = "", port: Int = 0, cassandraHost: String = "", keyspace: String = "", table: String = "")
+case class Config(port: Int = 0, cassandraHost: String = "", keyspace: String = "", table: String = "")

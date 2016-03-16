@@ -7,20 +7,26 @@ scalaVersion := "2.11.7"
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 libraryDependencies ++= {
-   val akkaV       = "2.4.2"
-   val akkaStreamV = "2.0.1"
-   val scalaTestV  = "2.2.5"
+   val akkaVersion       = "2.4.2"
+   val scalaTestVersion  = "2.2.5"
    Seq(
-      "com.typesafe.akka" %% "akka-actor"                           % akkaV,
-      "com.typesafe.akka" %% "akka-stream-experimental"             % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-core-experimental"          % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-experimental"               % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental"    % akkaStreamV,
+      "com.typesafe.akka" %% "akka-actor"                           % akkaVersion,
+      "com.typesafe.akka" %% "akka-stream"             		        % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-experimental"               % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental"    % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-testkit"       		        % akkaVersion,
       "com.datastax.cassandra" % "cassandra-driver-core"            % "3.0.0",
       "com.github.scopt"  %% "scopt"                                % "3.3.0",
-      "com.typesafe.akka" %% "akka-http-testkit-experimental"       % akkaStreamV,
-      "org.scalatest"     %% "scalatest"                            % scalaTestV % "test"
+      "org.scalatest"     %% "scalatest"                            % scalaTestVersion % "test",
+      "org.scalatest"     %% "scalatest"                            % scalaTestVersion % "test"
    )
 }
 
 assemblyJarName in assembly := "mesos-workshop.jar"
+
+assemblyMergeStrategy in assembly := {
+   case m if m.toLowerCase.matches("meta-inf.*\\.sf$") => MergeStrategy.discard
+   case PathList("META-INF", xs @ _*)                  => MergeStrategy.discard
+   case PathList("reference.conf")                     => MergeStrategy.concat
+   case _                                              => MergeStrategy.first
+}

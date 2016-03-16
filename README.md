@@ -72,21 +72,53 @@ After that Chronos application should appear in Marathon UI and [Chronos UI](htt
 Mesos Master's UI.
 
 ## Running dockerized services
+This project comes with simple [Akka microservice](src/main/scala/akka/microservice/AkkaMicroservice) that accepts events, stores them in Cassandra and 
+allows to count totals based on campaign id and event type. Event model: 
 
+      case class Event(id: String, campaignId: String, eventType: String, value: Long, timestamp: String)
+      
+We're going to launch this microservice on Mesos in Docker container and scale number of its instances up and down with Marathon.
+First the Docker image with the latest service binary should be built and deployed to Mesos. From the root of the project:
+      
+      sbt clean assembly
+      
+      cp target/scala-2.11/mesos-workshop.jar images/microservice/akka-microservice.jar
+      
+      docker build -t datastrophic/akka-microservice:latest images/microservice
+      
+      curl -XPOST 'http://marathon:8080/v2/apps' -H 'Content-Type: application/json' -d '{
+        "id": "akka-microservice",
+        "container": {
+          "type": "DOCKER",
+          "docker": {
+            "image": "datastrophic/akka-microservice:latest",
+            "portMappings": [{"containerPort": 8088}],
+            "parameters": [
+                { "key": "env", "value": "CASSANDRA_HOST='"$(docker-machine ip mesos)"'" },
+                { "key": "env", "value": "CASSANDRA_KEYSPACE=demo" },
+                { "key": "env", "value": "CASSANDRA_TABLE=event"}
+            ]
+          }
+        },
+        "cpus": 1,
+        "mem": 512,
+        "instances": 1
+      }'
 
+Via Marathon UI identify the host and port of the service (e.g. mesos-slave:31158) and perform some queries:
 
-         {
+         curl -XPOST 'http://mesos-slave:31158/event' -H 'Content-Type: application/json' -d '{
             "id": "2e272715-c267-4c6b-8ab7-c9f96c5ab15a",
             "campaignId": "275ef4a2-513e-43e2-b85a-e656737c1147",
             "eventType": "impression",
             "value": 1,
             "timestamp": "2016-03-15 12:15:39"
-         } 
+         }'
          
          
          
          
-         read the results: GET http://<host>:<port>/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
+         curl -XGET http://mesos-slave:31158/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
 
  
 ## Running Spark applications
