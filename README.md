@@ -1,13 +1,37 @@
 ## Overview
 
-Docker description: how many containers of what is launched
+This project is dedicated to provide a set of examples to illustrate main Mesos use cases applied to architectures based on SMACK stack.
+What is covered:
+
+* How to run dockerized Chronos via Marathon
+* How to build and submit microservices in Docker containers via Marathon
+* Different modes of running Spark jobs on cluster (fine-grained and coarse-crained)
+* Running scheduled Spark jobs in Chronos
+* Example implementation of Mesos Framework aimed to show how to build basic schedulers
+
+####Environment description:
+The whole environment is represented by set of Docker containers orchestrated via `docker-compose`:
 
 - ZooKeeper
-- Mesos master
+- Mesos Master
 - Mesos Agent
 - Marathon
+- Cassandra
 
-##Prerequisites
+To attach to running container (consider as ssh-ing to the host) container name or id is needed and could be found via
+ 
+      docker-compose ps
+or
+
+      docker ps
+and then 
+      
+      docker exec -ti <container name/id> bash      
+For example to connect to Mesos Slave:
+
+      docker exec -ti mesosworkshop_mesos-slave_1 bash
+
+####Prerequisites
 
 Docker and docker-compose are used for running code samples:
 
@@ -20,7 +44,7 @@ For building the app, SBT is used
 
 The application was created with Typesafe Activator
 
-###Environment setup
+####Environment setup
 It's possible to create a full Mesos environment on the local machine using docker-compose. 
 
 Depending on one's needs virtual machine memory could be adjusted to different value, but memory should be gte 4GB. Steps to create new 
@@ -192,5 +216,39 @@ Spark jobs for running in Chronos are basically all the computational jobs neede
 
 ##Mesos Framework Example
 
-TBD
+__Throttler__ framework is designed for load testing Cassandra in distributed manner. The Scheduler performance is controlled  
+by the next properties:
 
+      --total-queries - total amount of queries to execute during the test
+      --queries-per-task - how many queries are executed within single Mesos Task
+      --parallelism - how many Tasks are executed simultaneously 
+      --mode [fine-grained|node-local] - type of execution
+       
+Two example Scheduler implementations are provided here: 
+ 
+ * [NodeLocalScheduler](src/scala/io/datastrophic/mesos/NodeLocalScheduler.scala) which limits tasks to be executed only by one per host
+ * [FineGrainedScheduler](src/scala/io/datastrophic/mesos/FineGrainedScheduler.scala) which limits only amount of tasks running in parallel disregarding the 
+ host
+  
+ 
+To run the framework build the project and distribute across containers:
+  
+      sbt clean assembly distribute
+
+This build a fatjar and distribute across containers via linked volume directories, so the resulting jar will be 
+immediately available in containers. To run Throttler user should be logged in (attached to) docker container and from there execute:
+  
+     java -cp /throttle/throttle-framework.jar -Dexecutor.path=/throttle/throttle-executor.sh io.datastrophic.mesos.Throttler \
+     --mesos-master zk://zookeeper:2181/mesos \
+     --cassandra-host cassandra \
+     --keyspace demo_framework \
+     --total-queries 100 \
+     --queries-per-task 5 \
+     --parallelism 5 \
+     --mode fine-grained
+
+The `--mode` parameter could take either `fine-grained` or `node-local` values to see the differences, check out scheduler logs and 
+ Mesos Master UI on how's it going.
+ 
+One can play with load test parameters, but remember that everything is executed inside a virtual machine (in case of Mac) and memory
+starvation could start pretty quickly when the load becomes high. Which in turn can lead to containers failures.

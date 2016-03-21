@@ -10,6 +10,7 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
 import com.datastax.driver.core.Cluster
+import io.datastrophic.common.CassandraUtil
 
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
@@ -82,10 +83,7 @@ object AkkaMicroservice {
    import SchemaHelper._
 
    def run(config: Config) = {
-      val session = Cluster.builder()
-                    .addContactPoint(config.cassandraHost)
-                    .build()
-                    .connect()
+      val session = CassandraUtil.buildSession(config.cassandraHost)
 
       val clusterContext = ClusterContext(session, config.keyspace, config.table)
 
@@ -131,4 +129,4 @@ object SchemaHelper {
    }
 }
 
-case class Config(port: Int = 0, cassandraHost: String = "", keyspace: String = "", table: String = "")
+protected case class Config(port: Int = 0, cassandraHost: String = "", keyspace: String = "", table: String = "")

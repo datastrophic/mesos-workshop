@@ -33,6 +33,7 @@ services:
       - MESOS_PORT=5151
       - MESOS_MASTER=zk://zookeeper:2181/mesos
       - SPARK_PUBLIC_DNS=mesos-slave
+      - CUSTOM_EXECUTOR_HOME=/throttle
     links:
       - zookeeper
       - mesos-master
@@ -43,6 +44,7 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./executor:/throttle
 
   marathon:
     image: datastrophic/marathon:0.15.3
