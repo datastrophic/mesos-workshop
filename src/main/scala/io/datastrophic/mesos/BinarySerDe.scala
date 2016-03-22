@@ -1,6 +1,6 @@
 package io.datastrophic.mesos
 
-import java.io.{ByteArrayOutputStream, ObjectOutputStream, ByteArrayInputStream, ObjectInputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 trait BinarySerDe {
    def serialize[T](o: T): Array[Byte] = {

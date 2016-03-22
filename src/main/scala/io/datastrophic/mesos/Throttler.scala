@@ -1,9 +1,6 @@
 package io.datastrophic.mesos
 
-import com.datastax.driver.core.Session
-import com.twitter.chill.{ScalaKryoInstantiator, EmptyScalaKryoInstantiator}
 import io.datastrophic.common.CassandraUtil
-import io.datastrophic.mesos.ThrottleExecutor._
 import org.apache.mesos.MesosSchedulerDriver
 import org.apache.mesos.Protos.FrameworkInfo
 import org.slf4j.LoggerFactory

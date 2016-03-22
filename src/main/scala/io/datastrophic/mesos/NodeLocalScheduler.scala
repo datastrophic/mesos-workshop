@@ -1,12 +1,11 @@
 package io.datastrophic.mesos
 
 import java.util
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Scheduler, SchedulerDriver}
+import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -52,6 +51,7 @@ class NodeLocalScheduler(val config: Config) extends ThrottleScheduler {
    override def resourceOffers(driver: SchedulerDriver, offers: util.List[Offer]): Unit = {
       for(offer <- offers){
          stateLock.synchronized {
+            logger.debug(s"Received resource offer: ${offer.toString}")
             if(queriesToRun.get() > 0) {
                val slaveId = offer.getSlaveId.getValue
 

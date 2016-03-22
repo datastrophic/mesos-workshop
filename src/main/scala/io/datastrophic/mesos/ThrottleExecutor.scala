@@ -1,11 +1,11 @@
 package io.datastrophic.mesos
 
-import java.util.concurrent.{Executors, ExecutorService}
+import java.util.concurrent.{ExecutorService, Executors}
 
 import com.google.protobuf.ByteString
 import io.datastrophic.common.CassandraUtil
 import org.apache.mesos.Protos._
-import org.apache.mesos.{MesosExecutorDriver, ExecutorDriver, Executor}
+import org.apache.mesos.{Executor, ExecutorDriver, MesosExecutorDriver}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}

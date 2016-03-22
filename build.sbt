@@ -17,7 +17,6 @@ libraryDependencies ++= {
       "org.apache.mesos"        % "mesos"                                % mesosVersion,
       "com.datastax.cassandra"  % "cassandra-driver-core"                % "3.0.0",
       "com.github.scopt"       %% "scopt"                                % "3.3.0",
-      "com.twitter"            %% "chill"                                % "0.8.0",
       "com.typesafe.akka"      %% "akka-actor"                           % akkaVersion,
       "com.typesafe.akka"      %% "akka-stream"             		       % akkaVersion,
       "com.typesafe.akka"      %% "akka-http-experimental"               % akkaVersion,

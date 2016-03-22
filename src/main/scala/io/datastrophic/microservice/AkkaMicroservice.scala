@@ -9,7 +9,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
-import com.datastax.driver.core.Cluster
 import io.datastrophic.common.CassandraUtil
 
 import scala.collection.JavaConversions._

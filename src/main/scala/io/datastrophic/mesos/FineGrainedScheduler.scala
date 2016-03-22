@@ -5,11 +5,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Scheduler, SchedulerDriver}
+import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 
 class FineGrainedScheduler(val config: Config) extends ThrottleScheduler {
 
@@ -48,6 +47,7 @@ class FineGrainedScheduler(val config: Config) extends ThrottleScheduler {
    override def resourceOffers(driver: SchedulerDriver, offers: util.List[Offer]): Unit = {
       for(offer <- offers){
          stateLock.synchronized {
+            logger.debug(s"Received resource offer: ${offer.toString}")
             if(queriesToRun.get() > 0) {
                if(currentTasks.get() <= config.parallelism){
                   logger.info(s"Launching task on slave ${offer.getSlaveId.getValue}")

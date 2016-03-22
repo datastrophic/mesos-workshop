@@ -1,14 +1,10 @@
 package io.datastrophic.mesos
 
-import java.util
-import java.util.concurrent.locks.ReentrantLock
-
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Scheduler, SchedulerDriver}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 
 trait ThrottleScheduler extends Scheduler with TaskBuilder {
 
