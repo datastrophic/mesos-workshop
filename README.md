@@ -231,7 +231,7 @@ by the next properties:
       --queries-per-task - how many queries are executed within single Mesos Task
       --parallelism - how many Tasks are executed simultaneously   
  
-Scheduler implementation: [ThrottleScheduler](src/scala/io/datastrophic/mesos/throttler/ThrottleScheduler.scala).
+Scheduler implementation: [ThrottleScheduler](src/main/scala/io/datastrophic/mesos/throttler/ThrottleScheduler.scala).
 
 To run the framework build the project and distribute across containers:
   
@@ -255,9 +255,10 @@ starvation could start pretty quickly when the load becomes high. Which in turn 
 Mesos uses Dominant Resource Fairness algorithm to achieve fair resource allocation across frameworks. DRF framework is used to
 demonstrate different cases and how DRF handles them. 
 
-Scheduler implementation: [DRFDemoScheduler](src/scala/io/datastrophic/mesos/drf/DRFDemoScheduler.scala).
+Scheduler implementation: [DRFDemoScheduler](src/main/scala/io/datastrophic/mesos/drf/DRFDemoScheduler.scala).
 
-This framework has been used to provide some experimental results for the [blog post about DRF](http://datastrophic.io). 
+This framework has been used to provide some experimental results for 
+[Datastrophic blog post about DRF](http://datastrophic.io/resource-allocation-in-mesos-dominant-resource-fairness-explained/). 
 It is supposed that multiple instances of this framework should be run in parallel on the same cluster to observe DRF behavior 
 when frameworks compete for resources. So main parameters for the framework are name (to distinguish it among others) and 
 resources needed to run one task (cpu and memory). Invocation example:
