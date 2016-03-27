@@ -1,11 +1,12 @@
-package io.datastrophic.mesos
+package io.datastrophic.mesos.throttler
 
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.google.protobuf.ByteString
 import io.datastrophic.common.CassandraUtil
+import io.datastrophic.mesos.{BaseMesosExecutor, BinarySerDe}
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Executor, ExecutorDriver, MesosExecutorDriver}
+import org.apache.mesos.{ExecutorDriver, MesosExecutorDriver}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
@@ -18,16 +19,23 @@ object ThrottleExecutor extends BinarySerDe {
       var classLoader: ClassLoader = null
       var threadPool: ExecutorService = null
 
-      val exec = new Executor {
+      val exec = new BaseMesosExecutor {
          override def launchTask(driver: ExecutorDriver, task: TaskInfo): Unit = {
             val arg = task.getData.toByteArray
+
             threadPool.execute(new Runnable() {
                override def run(): Unit = {
                   val deserializedTask = deserialize[Task[Any]](task.getData.toByteArray)
 
                   val taskStatus = TaskStatus.newBuilder().setTaskId(task.getTaskId)
 
-                  logger.info(s"Task ${task.getTaskId.getValue} received: $deserializedTask")
+                  logger.info(s"Task ${task.getTaskId.getValue} received by executor: ${task.getExecutor.getExecutorId.getValue}")
+
+                  driver.sendStatusUpdate(
+                     taskStatus
+                     .setState(TaskState.TASK_RUNNING)
+                     .build()
+                  )
 
                   val start = System.currentTimeMillis()
                   Try{
@@ -38,8 +46,7 @@ object ThrottleExecutor extends BinarySerDe {
                         logger.info(s"Task ${task.getTaskId.getValue} finished")
                         val msg = s"Executed ${deserializedTask.queries.size} queries in ${(System.currentTimeMillis()- start)/1000f} sec."
 
-                        //delay is needed to demonstrate declines of resources offers in node-local scheduler
-                        Thread.sleep(10000)
+                        Thread.sleep(5000)
 
                         driver.sendStatusUpdate(
                            taskStatus
@@ -57,7 +64,6 @@ object ThrottleExecutor extends BinarySerDe {
                            .setState(TaskState.TASK_ERROR)
                            .setData(ByteString.copyFrom(serialize(ex.getMessage)))
                            .build())
-                        System.exit(1)
                   }
                }
 
@@ -69,18 +75,6 @@ object ThrottleExecutor extends BinarySerDe {
             Thread.currentThread.setContextClassLoader(classLoader)
             threadPool = Executors.newCachedThreadPool()
          }
-
-         override def frameworkMessage(driver: ExecutorDriver, data: Array[Byte]): Unit = {}
-
-         override def error(driver: ExecutorDriver, message: String): Unit = {}
-
-         override def reregistered(driver: ExecutorDriver, slaveInfo: SlaveInfo): Unit = {}
-
-         override def killTask(driver: ExecutorDriver, taskId: TaskID): Unit = {}
-
-         override def disconnected(driver: ExecutorDriver): Unit = {}
-
-         override def shutdown(driver: ExecutorDriver): Unit = {}
       }
 
       new MesosExecutorDriver(exec).run()

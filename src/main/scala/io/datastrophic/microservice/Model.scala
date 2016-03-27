@@ -1,4 +1,4 @@
-package akka.microservice
+package io.datastrophic.microservice
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.datastax.driver.core.Session

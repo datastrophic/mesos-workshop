@@ -4,9 +4,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{Scheduler, SchedulerDriver}
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
-
-trait ThrottleScheduler extends Scheduler with TaskBuilder {
+trait BaseMesosScheduler extends Scheduler {
 
    private val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -27,9 +25,4 @@ trait ThrottleScheduler extends Scheduler with TaskBuilder {
    override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, masterInfo: MasterInfo): Unit = {}
 
    override def executorLost(driver: SchedulerDriver, executorId: ExecutorID, slaveId: SlaveID, status: Int): Unit = {}
-
-   def launch(driver: SchedulerDriver, offer: Offer, numberOfQueries: Int): Unit ={
-      val taskInfo = buildMesosTask(driver, offer, numberOfQueries)
-      driver.launchTasks(List(offer.getId), List(taskInfo))
-   }
 }

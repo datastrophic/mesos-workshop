@@ -1,4 +1,4 @@
-package io.datastrophic.mesos
+package io.datastrophic.mesos.throttler
 
 import io.datastrophic.common.CassandraUtil
 import org.apache.mesos.MesosSchedulerDriver
@@ -21,16 +21,7 @@ object Throttler {
 
       ensureSchema(config)
 
-      val scheduler = config.mode match {
-         case "node-local" =>
-            logger.info("Starting in node-local mode. Tasks will be executed in one task per node mode.")
-            new NodeLocalScheduler(config)
-         case _ =>
-            logger.info("Starting in fine-grained mode. Scheduler will accept all the offers until parallelism threshold is not reached.")
-            new FineGrainedScheduler(config)
-      }
-
-      val driver = new MesosSchedulerDriver(scheduler, framework, config.mesosURL)
+      val driver = new MesosSchedulerDriver(new ThrottleScheduler(config), framework, config.mesosURL)
       driver.run()
    }
 
@@ -42,7 +33,6 @@ object Throttler {
          opt[String]('k', "keyspace") required() action { (x, c) => c.copy(keyspace = x) } text ("keyspace name")
          opt[Int]('t', "total-queries") required() action { (x, c) => c.copy(totalQueries = x) } text ("total amount of queries to execute")
          opt[Int]('f', "queries-per-task") required() action { (x, c) => c.copy(queriesPerTask = x) } text ("amount of queries to execute within single task")
-         opt[String]('o', "mode") required() action { (x, c) => c.copy(mode = x) } text ("execution mode: [fine-grained|node-local]")
          opt[Int]('p', "parallelism") required() action { (x, c) => c.copy(parallelism = x) } text ("number of tasks run in parallel")
          help("help") text("prints this usage text")
       }
@@ -61,7 +51,6 @@ protected case class Config(
    keyspace: String = "",
    totalQueries: Int = 0,
    queriesPerTask: Int = 0,
-   mode: String = "fine-grained",
    parallelism: Int = 1
 )
 

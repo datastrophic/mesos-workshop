@@ -1,4 +1,4 @@
-package akka.microservice
+package io.datastrophic.microservice
 
 import java.text.SimpleDateFormat
 import java.util.UUID

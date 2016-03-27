@@ -92,7 +92,7 @@ to `docker-machine ip mesos`.
         "instances": 1
       }'
  
-After that Chronos application should appear in Marathon UI and [Chronos UI](http://mesos:8400/) should be available on it's own and visible in 
+After that Chronos application should appear in Marathon UI and [Chronos UI](http://mesos:4400/) should be available on it's own and visible in 
 Mesos Master's UI.
 
 ## Running dockerized services
@@ -104,9 +104,7 @@ allows to count totals based on campaign id and event type. Event model:
 We're going to launch this microservice on Mesos in Docker container and scale number of its instances up and down with Marathon.
 First the Docker image with the latest service binary should be built and deployed to Mesos. From the root of the project:
       
-      sbt clean assembly
-      
-      cp target/scala-2.11/mesos-workshop.jar images/microservice/akka-microservice.jar
+      sbt clean assembly distribute
       
       docker build -t datastrophic/akka-microservice:latest images/microservice
       
@@ -132,16 +130,26 @@ First the Docker image with the latest service binary should be built and deploy
 
 Via Marathon UI identify the host and port of the service (e.g. mesos-slave:31158) and perform some queries to post and read the data:
 
-         curl -XPOST 'http://mesos-slave:31158/event' -H 'Content-Type: application/json' -d '{
+         curl -XPOST 'http://mesos-slave:31711/event' -H 'Content-Type: application/json' -d '{
             "id": "2e272715-c267-4c6b-8ab7-c9f96c5ab15a",
             "campaignId": "275ef4a2-513e-43e2-b85a-e656737c1147",
             "eventType": "impression",
-            "value": 1,
+            "value": 42,
+            "timestamp": "2016-03-15 12:15:39"
+         }'
+         
+         curl -XPOST 'http://mesos-slave:31711/event' -H 'Content-Type: application/json' -d '{
+            "id": "2e272715-c267-4c6b-8ab7-c9f96c5ab15a",
+            "campaignId": "275ef4a2-513e-43e2-b85a-e656737c1147",
+            "eventType": "click",
+            "value": 13,
             "timestamp": "2016-03-15 12:15:39"
          }'
          
          
-         curl -XGET http://mesos-slave:31158/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
+         curl -XGET http://mesos-slave:31711/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/impression
+         
+         curl -XGET http://mesos-slave:31711/campaign/275ef4a2-513e-43e2-b85a-e656737c1147/totals/click
 
 You can try to scale up and down the number of instances of the service and query different ones to verify that everything is working.
  
@@ -165,7 +173,7 @@ run just one application at a time. You can cap the maximum number of cores usin
         --deploy-mode client \
         --total-executor-cores 2 \
         /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar \
-        1000
+        250
         
       
 In “fine-grained” mode, each Spark task runs as a separate Mesos task. This allows multiple instances of Spark (and other frameworks) 
@@ -180,7 +188,7 @@ interactive queries or serving web requests.
        --conf "spark.mesos.coarse=false"\
        --total-executor-cores 2 \
        /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar \
-       1000
+       250
              
              
 ### Submitting Spark jobs via Marathon and Chronos
@@ -190,7 +198,7 @@ Marathon is designed for keeping long-running apps alive, so in context of Spark
 are the best candidates to run via Marathon.
 
       curl -XPOST 'http://marathon:8080/v2/apps' -H 'Content-Type: application/json' -d '{
-        "cmd": "/opt/spark/bin/spark-submit --class org.apache.spark.examples.SparkPi --master mesos://zk://zookeeper:2181/mesos --deploy-mode client --total-executor-cores 2 /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar 1000",
+        "cmd": "/opt/spark/bin/spark-submit --class org.apache.spark.examples.SparkPi --master mesos://zk://zookeeper:2181/mesos --deploy-mode client --total-executor-cores 2 /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar 250",
         "id": "spark-pi",
         "cpus": 1,
         "mem": 1024,
@@ -203,7 +211,7 @@ Spark jobs for running in Chronos are basically all the computational jobs neede
 
       curl -L -H 'Content-Type: application/json' -X POST http://mesos:4400/scheduler/iso8601 -d '{
           "name": "Scheduled Spark Submit Job",
-          "command": "/opt/spark/bin/spark-submit --class org.apache.spark.examples.SparkPi --master mesos://zk://zookeeper:2181/mesos --deploy-mode client --total-executor-cores 2 /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar 1000",
+          "command": "/opt/spark/bin/spark-submit --class org.apache.spark.examples.SparkPi --master mesos://zk://zookeeper:2181/mesos --deploy-mode client --total-executor-cores 2 /opt/spark/lib/spark-examples-1.6.0-hadoop2.6.0.jar 250",
           "shell": true,
           "async": false,
           "cpus": 0.1,
@@ -214,23 +222,17 @@ Spark jobs for running in Chronos are basically all the computational jobs neede
           "schedule": "R/2016-03-14T12:35:00.000Z/PT3M"
       }'
 
-##Mesos Framework Example
-
+##Mesos Framework Examples
+###Cassandra Load Testing Framework 
 __Throttler__ framework is designed for load testing Cassandra in distributed manner. The Scheduler performance is controlled  
 by the next properties:
 
       --total-queries - total amount of queries to execute during the test
       --queries-per-task - how many queries are executed within single Mesos Task
-      --parallelism - how many Tasks are executed simultaneously 
-      --mode [fine-grained|node-local] - type of execution
-       
-Two example Scheduler implementations are provided here: 
+      --parallelism - how many Tasks are executed simultaneously   
  
- * [NodeLocalScheduler](src/scala/io/datastrophic/mesos/NodeLocalScheduler.scala) which limits tasks to be executed only by one per host
- * [FineGrainedScheduler](src/scala/io/datastrophic/mesos/FineGrainedScheduler.scala) which limits only amount of tasks running in parallel disregarding the 
- host
-  
- 
+Scheduler implementation: [ThrottleScheduler](src/scala/io/datastrophic/mesos/throttler/ThrottleScheduler.scala).
+
 To run the framework build the project and distribute across containers:
   
       sbt clean assembly distribute
@@ -238,17 +240,30 @@ To run the framework build the project and distribute across containers:
 This build a fatjar and distribute across containers via linked volume directories, so the resulting jar will be 
 immediately available in containers. To run Throttler user should be logged in (attached to) docker container and from there execute:
   
-     java -cp /throttle/throttle-framework.jar -Dexecutor.path=/throttle/throttle-executor.sh io.datastrophic.mesos.Throttler \
+     java -cp /throttle/throttle-framework.jar -Dexecutor.path=/throttle/throttle-executor.sh io.datastrophic.mesos.throttler.Throttler \
      --mesos-master zk://zookeeper:2181/mesos \
      --cassandra-host cassandra \
      --keyspace demo_framework \
      --total-queries 100 \
      --queries-per-task 5 \
-     --parallelism 5 \
-     --mode fine-grained
-
-The `--mode` parameter could take either `fine-grained` or `node-local` values to see the differences, check out scheduler logs and 
- Mesos Master UI on how's it going.
+     --parallelism 5 
  
 One can play with load test parameters, but remember that everything is executed inside a virtual machine (in case of Mac) and memory
 starvation could start pretty quickly when the load becomes high. Which in turn can lead to containers failures.
+
+###Dominant Resource Fairness Demo Framework
+Mesos uses Dominant Resource Fairness algorithm to achieve fair resource allocation across frameworks. DRF framework is used to
+demonstrate different cases and how DRF handles them. 
+
+Scheduler implementation: [DRFDemoScheduler](src/scala/io/datastrophic/mesos/drf/DRFDemoScheduler.scala).
+
+This framework has been used to provide some experimental results for the [blog post about DRF](http://datastrophic.io). 
+It is supposed that multiple instances of this framework should be run in parallel on the same cluster to observe DRF behavior 
+when frameworks compete for resources. So main parameters for the framework are name (to distinguish it among others) and 
+resources needed to run one task (cpu and memory). Invocation example:
+ 
+      java -cp /throttle/throttle-framework.jar -Dexecutor.path=/throttle/drf-executor.sh io.datastrophic.mesos.drf.DRFDemoFramework \
+      --mesos-master zk://zookeeper:2181/mesos \
+      --framework-name 'Framework A' \
+      --task-cpus 0.5 \
+      --task-memory 512 

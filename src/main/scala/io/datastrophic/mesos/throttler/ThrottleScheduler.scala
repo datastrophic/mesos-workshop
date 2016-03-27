@@ -1,23 +1,26 @@
-package io.datastrophic.mesos
+package io.datastrophic.mesos.throttler
 
 import java.util
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
+import io.datastrophic.mesos.BaseMesosScheduler
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 
-class FineGrainedScheduler(val config: Config) extends ThrottleScheduler {
+class ThrottleScheduler(val config: Config) extends BaseMesosScheduler with CassandraTaskBuilder {
 
-   private val logger = LoggerFactory.getLogger(classOf[FineGrainedScheduler])
+   private val logger = LoggerFactory.getLogger(classOf[ThrottleScheduler])
    private val stateLock = new ReentrantLock()
 
    val queriesToRun = new AtomicInteger(config.totalQueries)
    val currentTasks = new AtomicInteger(0)
    val errors = new AtomicInteger(0)
+   val executors = new ConcurrentHashMap[String, ExecutorInfo]()
 
    override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
       status.getState match {
@@ -39,6 +42,8 @@ class FineGrainedScheduler(val config: Config) extends ThrottleScheduler {
                System.exit(1)
             }
 
+         case TaskState.TASK_RUNNING => ()
+
          case _ =>
             logger.info(s"${status.toString}")
       }
@@ -53,8 +58,10 @@ class FineGrainedScheduler(val config: Config) extends ThrottleScheduler {
                   logger.info(s"Launching task on slave ${offer.getSlaveId.getValue}")
 
                   val numberOfQueries = if(queriesToRun.get() < config.queriesPerTask) queriesToRun.get() else config.queriesPerTask
+                  val executorInfo = executors.getOrElseUpdate(offer.getSlaveId.getValue, buildExecutorInfo(driver, "ThrottlerFG"))
 
-                  launch(driver, offer, numberOfQueries)
+                  val taskInfo = buildCassandraTask(offer, executorInfo, numberOfQueries)
+                  driver.launchTasks(List(offer.getId), List(taskInfo))
 
                   currentTasks.incrementAndGet()
                   queriesToRun.getAndSet(queriesToRun.get() - numberOfQueries)
