@@ -11,7 +11,7 @@ javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 libraryDependencies ++= {
    val akkaVersion       = "2.4.2"
    val scalaTestVersion  = "2.2.5"
-   val mesosVersion      = "0.27.1"
+   val mesosVersion      = "0.28.1"
 
    Seq(
       "org.apache.mesos"        % "mesos"                                % mesosVersion,

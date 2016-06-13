@@ -10,7 +10,7 @@ services:
       - "3888:3888"
 
   mesos-master:
-    image: datastrophic/mesos-master:0.27.1
+    image: datastrophic/mesos-master:0.28.1
     hostname: "mesos-master"
     privileged: true
     environment:
@@ -25,7 +25,7 @@ services:
       - "5050:5050"
 
   mesos-slave:
-    image: datastrophic/mesos-slave-spark:mesos-0.27.1-spark-1.6
+    image: datastrophic/mesos-slave-spark:mesos-0.28.1-spark-1.6
     hostname: "mesos-slave"
     privileged: true
     environment:
