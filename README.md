@@ -75,7 +75,7 @@ to `docker-machine ip mesos`.
           "type": "DOCKER",
           "docker": {
             "network": "HOST",
-              "image": "datastrophic/chronos:mesos-0.27.1-chronos-2.5",
+              "image": "datastrophic/chronos:mesos-0.28.1-chronos-2.5",
               "parameters": [
                    { "key": "env", "value": "CHRONOS_HTTP_PORT=4400" },
                    { "key": "env", "value": "LIBPROCESS_IP='"$(docker-machine ip mesos)"'" },
